@@ -4,7 +4,7 @@
     'category': 'eCommerce',
     'summary': 'The Official Flutterwave Payment Acquirer for Odoo Clients',
     'version': '3.0',
-    'license': 'AGPL-3',
+    'license': 'LGPL-3',
     'author': 'Flutterwave Technology Solutions',
     'website': 'https://app.flutterwave.com/',
     'description': """Flutterwave Payment Acquirer""",
@@ -20,5 +20,6 @@
         ],
     },
     'images': ['static/src/img/flutterwave.png'],
-    'application': True    
+    'application': True,
+    'unistall_hook': 'uninstall_hook',    
 }
