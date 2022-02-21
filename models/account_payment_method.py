@@ -1,7 +1,7 @@
 from odoo import api, models
 
 
-class AccountPaymentMethod(models.model):
+class AccountPaymentMethod(models.Model):
     _inherit = 'account.payment.method'
 
     @api.model
