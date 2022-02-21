@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
         <template id="rave_form">
+            <script src="https://checkout.flutterwave.com/v3.js"></script>
             <input type="hidden" name="data_set" t-att-data-action-url="tx_url" data-remove-me=""/>
             <input id="acquirer_rave" type="hidden" name="acquirer" t-att-value="acquirer.id"/>
            
@@ -25,5 +25,4 @@
             <input type="hidden" name="environment" t-att-value="acquirer.environment"/>
             <script type="text/javascript" src="/payment_rave/static/src/js/payment_form.js"></script>
         </template>
-    </data>
 </odoo>

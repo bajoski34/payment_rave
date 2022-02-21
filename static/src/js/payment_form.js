@@ -1,5 +1,5 @@
 /* global Rave */
-odoo.define("payment_rave.rave", (require) => {
+odoo.define("payment_rave.payment_form", (require) => {
   "use strict";
 
   const core = require("web.core");
@@ -118,6 +118,11 @@ odoo.define("payment_rave.rave", (require) => {
           }
 
           x.close(); // use this to close the modal immediately after payment.
+        },
+        customizations: {
+          title: "Sample Test",
+          description: "Payment for items in cart",
+          logo: "https://assets.piedpiper.com/logo.png",
         },
       });
     },
