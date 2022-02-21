@@ -3,6 +3,8 @@ import requests
 from tokenize import group
 from werkzeug import urls
 
+from .currencies import SUPPORTED_CURRENCIES
+
 from odoo import api, fields, models, _
 
 class PaymentAcquirer(models.Model):
@@ -15,6 +17,15 @@ class PaymentAcquirer(models.Model):
     rave_secret_key = fields.Char(required_if_provider='rave', groups='base.group_user')
     rave_secret_hash = fields.Char(required_if_provider='rave', groups='base.group_user', string="Flutterwave Secret Hash")
     environment = fields.Char(required_if_provider='rave', groups='base.group_user')
+
+    @api.model
+    def _get_compatible_acquirers(self, *args, currency_id=None, **kwargs):
+        """ Overide of payment to unlist Flutterwave acquirers if currency is not supported """
+        acquirers = super()._get_compatible_acquirers(*args, currency_id=None, **kwargs)
+        currency = self.env['res.currency'].browse(currency_id).exists()
+        if currency and currency.name not in SUPPORTED_CURRENCIES:
+            acquirers = acquirers.filtered(lambda a: a.provider != 'rave')
+        return acquirers
 
     @api.model
     def _get_rave_api_url(self):

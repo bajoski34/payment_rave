@@ -7,8 +7,8 @@
         <field name="arch" type="xml">
             <xpath expr='//group[@name="acquirer"]' position='inside'>
                 <group attrs="{'invisible': [('provider', '!=', 'rave')]}">
-                    <field name="rave_public_key"  attrs="{'required':[('provider', '=', 'stripe'), ('state', '!=', 'disabled')]}" password="True"/>
-                    <field name="rave_secret_key"  attrs="{'required':[('provider', '=', 'stripe'), ('state', '!=', 'disabled')]}" password="True"/>
+                    <field name="rave_public_key"  attrs="{'required':[('provider', '=', 'rave'), ('state', '!=', 'disabled')]}" password="True"/>
+                    <field name="rave_secret_key"  attrs="{'required':[('provider', '=', 'rave'), ('state', '!=', 'disabled')]}" password="True"/>
                     <field name="rave_secret_hash" password="True"/>
                     <field name="environment"/>
                 </group>

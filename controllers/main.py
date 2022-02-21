@@ -6,13 +6,17 @@ import werkzeug
 from odoo import http
 from odoo.http import request
 from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
+from odoo.addons.payment_rave.const import EVENTS
 
 _logger = logging.getLogger(__name__)
 
-
 class RaveController(http.Controller):
+    _checkout_return_url = '/payment/rave/checkout'
+    _validation_return_url = '/payment/rave/validation'
+    _flutterwave_verify_charge = '/payment/rave/verify_charge'
+    _webhook_url = '/payment/rave/webhook'
     
-    @http.route(['/payment/values'], type='json', auth='public')
+    @http.route([_checkout_return_url], type='http', auth='public', csrf= False)
     def return_payment_values(self, **post):
         """ Upadate the payment values from the database"""
         acquirer_id = int(post.get('acquirer_id'))
@@ -20,7 +24,26 @@ class RaveController(http.Controller):
         # values = acquirer.rave_form_generate_values(acquirer)
         return post
 
-    @http.route(['/payment/rave/verify_charge'], type='json', auth='public')
+    @http.route([_webhook_url], type='json', auth='public', csrf= False)
+    def flutterwave_webhook(self):
+        """ Process the 'Payment Events' sent by Flutterwave to the webook.
+            :return:  An empty string to acknowledge the notification with a status of 200 response code.
+        """
+        event = json.loads(request.httprequest.data)
+        _logger.info('flutterwave_webhook: Values received:\n%s', pprint.pformat(event))
+        try:
+            if event['event'] == EVENTS['CHARGE']:
+                tx_sudo = request.env['payment.transaction'].sudo()._get_tx_from_feedback_data(
+                    'rave', data
+                )
+                if event['data']['status'] == 'successful' and flutterwave_verify_hash(tx_sudo.acquirer_id.rave_secret_hash):
+                    pass
+
+            if event['event'] == EVENTS['TRANSFER']:
+                pass
+        return ''
+
+    @http.route([_flutterwave_verify_charge], type='json', auth='public')
     def rave_verify_charge(self, **post):
         """ Verify a payment transaction
 
@@ -52,3 +75,19 @@ class RaveController(http.Controller):
         # add the payment transaction into the session to let the page /payment/process to handle it
         PaymentPostProcessing.add_payment_transaction(tx)
         return "/payment/process"
+
+    def flutterwave_verify_hash(self, flutterwave_hash):
+        """ verify the secret hash of the sent hook."""
+
+        if not flutterwave_hash:
+            _logger.warning("Ignored webhook event due to undefined webhook secret")
+            return False
+
+        signature_hash = request.httprequest.headers.get('verif-hash')
+
+        if signature_hash != flutterwave_hash:
+            _logger.warning("Ignored event with Invalid Signature")
+            return False
+
+        return True
+
