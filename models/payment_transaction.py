@@ -3,7 +3,7 @@ import requests
 import pprint
 import json
 from odoo import _, api, models, fields
-from odoo.addons.payment_rave.controllers.main import RaveController
+from odoo.addons.payment.payment_rave.controllers.main import RaveController
 # from odoo.addons.payment.payment_rave.controllers.main import RaveController
 
 _logger = logging.getLogger(__name__)
