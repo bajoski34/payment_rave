@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <data noupdate="1">
-        <record id="payment_payment_acquirer_rave" model="payment.acquirer">
+<odoo noupdate="1">
+        <record id="payment.payment_acquirer_rave" model="payment.acquirer">
             <field name="name">Flutterwave for Business</field>
             <field name="image_128" type="base64" file="payment_rave/static/src/img/icon.png"/>
             <field name="provider">rave</field>
@@ -26,5 +25,10 @@
                 </field>
                     
         </record>
-    </data>
+
+        <record id="payment_method_rave" model="account.payment.method">
+            <field name="name">Rave</field>
+            <field name="code">Rave</field>
+            <field name="payment_type">Inbound</field>
+        </record>
 </odoo>
