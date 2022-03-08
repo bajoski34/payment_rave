@@ -1,11 +1,14 @@
 # coding: utf-8
-import requests
+import requests, json, logging
 from tokenize import group
-from werkzeug import urls
+from werkzeug.urls import url_join
 
 from .currencies import SUPPORTED_CURRENCIES
 
-from odoo import api, fields, models, _
+from odoo import api, fields, service, models, _
+from odoo.exceptions import ValidationError
+
+_logger = logging.getLogger(__name__)
 
 class PaymentAcquirer(models.Model):
     _inherit = 'payment.acquirer'
@@ -29,28 +32,9 @@ class PaymentAcquirer(models.Model):
 
     @api.model
     def _get_rave_api_url(self):
-        """ Flutterwave URLs"""
-        return 'api.flutterwave.com'
-
-    def rave_form_generate_values(self, tx_values):
         self.ensure_one()
-        rave_tx_values = dict(tx_values)
-        temp_rave_tx_values = {
-            'company': self.company_id.name,
-            'amount': tx_values['amount'],  # Mandatory
-            'currency': tx_values['currency'].name,  # Mandatory anyway
-            'currency_id': tx_values['currency'].id,  # same here
-            'address_line1': tx_values.get('partner_address'),  # Any info of the partner is not mandatory
-            'address_city': tx_values.get('partner_city'),
-            'address_country': tx_values.get('partner_country') and tx_values.get('partner_country').name or '',
-            'email': tx_values.get('partner_email'),
-            'address_zip': tx_values.get('partner_zip'),
-            'name': tx_values.get('partner_name'),
-            'phone': tx_values.get('partner_phone'),
-        }
-
-        rave_tx_values.update(temp_rave_tx_values)
-        return rave_tx_values
+        """ Flutterwave URLs"""
+        return 'https://api.flutterwave.com'
 
     def _flw_make_request(self, endpoint, payload=None, method='POST', offline=False):
         """  Make a request to Flutterwave API at the specified endpoint,
@@ -67,31 +51,20 @@ class PaymentAcquirer(models.Model):
         """
         self.ensure_one()
 
-        url = urls.url_join('https://api.flutterwave.com/v3/', endpoint)
+        url = 'https://api.flutterwave.com/v3' + endpoint
+
+        odoo_version = service.common.exp_version()['server_version']
+        module_version = self.env.ref('base.module_payment_rave').installed_version
         headers = {
-            'AUTHORIZATION': f'Bearer {self.rave_secret_key}',
-            'Content-Type': 'application/js'
+            'Authorization': f'Bearer {self.rave_secret_key}',
+            'Content-Type': 'application/json',
+            "User-Agent": f'Odoo/{odoo_version} FlutterwaveNativeOdoo/{module_version}'
         }
         try:
-            response = requests.request(method, url, data=payload, headers=headers, timeout=60)
-
-            if not response.ok \
-                    and not offline \
-                    and 400 <= response.status_code < 500 \
-                    and response.json().get('error'):  # The 'code' entry is sometimes missing
-                try:
-                    response.raise_for_status()
-                except requests.exceptions.HTTPError:
-                    _logger.exception("invalid API request at %s with data %s", url, payload)
-                    error_msg = response.json().get('error', {}).get('message', '')
-                    raise ValidationError(
-                        "Flutterwave: " + _(
-                            "The communication with the API failed.\n"
-                            "Flutterwave gave us the following info about the problem:\n'%s'", error_msg
-                        )
-                    )
-        except requests.exceptions.ConnectionError:
-            _logger.exception("unable to reach endpoint at %s", url)
+            response = requests.request(method, url, data=json.dumps(payload), headers=headers, timeout=160)
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            _logger.exception("Unable to communicate with Flutterwave: %s", url)
             raise ValidationError("Flutterwave: " + _("Could not establish the connection to the API."))
         return response.json()
 
@@ -102,6 +75,15 @@ class PaymentAcquirer(models.Model):
         return self.env.ref('payment_rave.payment_method_rave').id
 
 
-
+    def _should_build_inline_form(self, is_validation=False):
+        """ Return whether the inline form should be instantiated if it exists.
+        For an acquirer to handle both direct payments and payment with redirection, it should
+        override this method and return whether the inline form should be instantiated (i.e. if the
+        payment should be direct) based on the operation (online payment or validation).
+        :param bool is_validation: Whether the operation is a validation
+        :return: Whether the inline form should be instantiated
+        :rtype: bool
+        """
+        return False
 
 

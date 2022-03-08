@@ -3,8 +3,9 @@
     'name': 'Flutterwave for Business',
     'version': '3.0',
     'category': 'eCommerce',
+    'sequence': -100,
     'summary': 'The Official Flutterwave Payment Acquirer for Odoo Clients',
-    'author': 'Flutterwave Technology Solutions',
+    'author': 'Flutterwave Developers',
     'website': 'https://app.flutterwave.com/',
     'description': """Flutterwave Payment Acquirer""",
     'depends': ['payment'],
@@ -13,12 +14,9 @@
         'views/payment_rave_templates.xml',
         'data/payment_acquirer_data.xml',
     ],
+    'images': ['static/description/icon.png'],
+    'installable': True,
     'application': True,
     'unistall_hook': 'uninstall_hook',
-    'assets': {
-        'web.assets_frontend': [
-            'payment_rave/static/src/js/payment_form.js',
-        ],
-    },
     'license': 'LGPL-3',    
 }
