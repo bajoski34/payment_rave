@@ -68,6 +68,28 @@ class PaymentAcquirer(models.Model):
             raise ValidationError("Flutterwave: " + _("Could not establish the connection to the API."))
         return response.json()
 
+    def _flw_get_request(self, endpoint, method='GET', offline=False):
+        self.ensure_one()
+
+        url = 'https://api.flutterwave.com/v3' + endpoint
+
+        odoo_version = service.common.exp_version()['server_version']
+        module_version = self.env.ref('base.module_payment_rave').installed_version
+        headers = {
+            'Authorization': f'Bearer {self.rave_secret_key}',
+            'Content-Type': 'application/json',
+            "User-Agent": f'Odoo/{odoo_version} FlutterwaveNativeOdoo/{module_version}'
+        }
+
+        try:
+            response = requests.request(method, url, data=None, headers=headers, timeout=60)
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            _logger.exception("Unable to communicate with Flutterwave: %s", url)
+            raise ValidationError("Flutterwave: " + _("Could not establish the connection to the API."))
+        return response.json()
+
+
     def _get_default_payment_method_id(self):
         self.ensure_one()
         if self.provider != 'rave':

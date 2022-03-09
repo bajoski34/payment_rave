@@ -35,7 +35,7 @@ class PaymentTransaction(models.Model):
         self.acquirer_reference = self.reference
 
         if payment_data.get('status') != 'success':
-            return 'Hey there'
+            raise ValidationError("Flutterwave: " + _("Unable to generate Payment Link. Try again"))
         return {'api_url': payment_data.get('data').get('link')}
 
     def _flutterwave_prepare_payment_request_payload(self):
@@ -73,6 +73,7 @@ class PaymentTransaction(models.Model):
         _logger.info("data stage get_tx_from_feedback_data: %s", data)
         
         reference = data.get('tx_ref')
+        self.acquirer_reference = reference
         transaction_id = data.get('transaction_id')
         from_flutterwave_status = data.get('status')
 
@@ -96,20 +97,27 @@ class PaymentTransaction(models.Model):
         if self.provider != 'rave':
             return
 
-        _logger.info("data stage process_feedback_data: %s", data)
-
-        if 'tx_ref' in data:
-            self.acquirer_reference = data['data'].get('tx_ref')
-
-        payment_data = self.acquirer_id._flw_make_request(
-            f'/transactions/verify_by_reference?tx_ref={self.acquirer_reference}', payload=None, method="GET"
+        _logger.info("reference stage process_feedback_data: %s", self.acquirer_reference)
+        payment_data = self.acquirer_id._flw_get_request(
+            f'/transactions/verify_by_reference?tx_ref={self.acquirer_reference}'
         )
         payment_status = payment_data.get('data').get('status') #confirm this is correct
+        currency = payment_data.get('data').get('currency')
+        amount = payment_data.get('data').get('amount')
 
-        if payment_status == 'successful':
+        _logger.info("flutterwave verify endpoint: %s", payment_status)
+
+        if payment_status == 'successful' and self.amount == amount and self.currency_id.name == currency:
             self._set_done()
         elif payment_status in ['cancelled', 'failed']:
             self._set_canceled("Flutterwave: " + _("Canceled payment with status: %s", payment_status))
+        elif payment_status == 'successful' and self.amount != amount or payment_status == 'successful' and self.currency_id.name != currency:
+            _logger.info("Successful Partial Payment Made: %s", payment_status)
+            _logger.info("amount: %s", amount)
+            _logger.info("self.amount: %s", self.amount)
+            _logger.info("currency: %s", currency)
+            _logger.info("self.currency: %s", self.currency_id.name)
+            self._set_pending(state_message="Partial Payment Made")
         else:
             _logger.info("Received data with invalid payment status: %s", payment_status)
             self._set_error(
